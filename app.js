@@ -516,13 +516,21 @@ clearCompletedBtn.addEventListener("click", () => {
 
 // ===================== テーマ =====================
 function initTheme() {
-  const saved = localStorage.getItem(THEME_KEY) || "light";
-  document.documentElement.setAttribute("data-theme", saved);
+  const saved = localStorage.getItem(THEME_KEY);
+  if (saved === "light" || saved === "dark") {
+    document.documentElement.setAttribute("data-theme", saved);
+  }
+}
+
+function currentEffectiveTheme() {
+  const stamped = document.documentElement.getAttribute("data-theme");
+  if (stamped) return stamped;
+  const systemDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  return systemDark ? "dark" : "light";
 }
 
 themeBtn.addEventListener("click", () => {
-  const cur = document.documentElement.getAttribute("data-theme");
-  const next = cur === "dark" ? "light" : "dark";
+  const next = currentEffectiveTheme() === "dark" ? "light" : "dark";
   document.documentElement.setAttribute("data-theme", next);
   localStorage.setItem(THEME_KEY, next);
 });
