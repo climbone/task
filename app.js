@@ -61,6 +61,16 @@ const composePriority = $("composePriority");
 const composeAddBtn = $("composeAddBtn");
 const composeCloseBtn = $("composeCloseBtn");
 
+const editPanel = $("editPanel");
+const editTitle = $("editTitle");
+const editList = $("editList");
+const editDue = $("editDue");
+const editPriority = $("editPriority");
+const editSaveBtn = $("editSaveBtn");
+const editDeleteBtn = $("editDeleteBtn");
+const editCloseBtn = $("editCloseBtn");
+let editingTaskId = null;
+
 const taskListEl = $("taskList");
 const emptyState = $("emptyState");
 
@@ -131,15 +141,20 @@ function renderListNav() {
     );
   });
 
-  // compose panel のリスト選択肢も更新
-  const prevValue = composeList.value;
-  composeList.innerHTML = state.lists
+  // compose / edit パネルのリスト選択肢も更新
+  populateListSelect(composeList, currentListId !== "__all__" ? currentListId : null);
+  populateListSelect(editList, editingTaskId ? state.tasks.find((t) => t.id === editingTaskId)?.listId : null);
+}
+
+function populateListSelect(selectEl, fallbackValue) {
+  const prevValue = selectEl.value;
+  selectEl.innerHTML = state.lists
     .map((l) => `<option value="${l.id}">${escapeHtml(l.name)}</option>`)
     .join("");
   if (state.lists.some((l) => l.id === prevValue)) {
-    composeList.value = prevValue;
-  } else if (currentListId !== "__all__" && state.lists.some((l) => l.id === currentListId)) {
-    composeList.value = currentListId;
+    selectEl.value = prevValue;
+  } else if (fallbackValue && state.lists.some((l) => l.id === fallbackValue)) {
+    selectEl.value = fallbackValue;
   }
 }
 
@@ -286,7 +301,7 @@ function buildTaskItem(task) {
   row.innerHTML = `
     <input type="checkbox" class="task-checkbox" ${task.completed ? "checked" : ""} />
     <div class="task-body">
-      <div class="task-title" contenteditable="true" spellcheck="false">${escapeHtml(task.title)}</div>
+      <div class="task-title">${escapeHtml(task.title)}</div>
       <div class="task-meta">
         ${currentListId === "__all__" && listInfo ? `<span class="task-tag task-list-badge"><span class="material-symbols-outlined">folder</span>${escapeHtml(listInfo.name)}</span>` : ""}
         ${due ? `<span class="task-tag ${due.cls}"><span class="material-symbols-outlined">event</span>${due.label}</span>` : ""}
@@ -299,6 +314,7 @@ function buildTaskItem(task) {
   `;
 
   const checkbox = row.querySelector(".task-checkbox");
+  checkbox.addEventListener("click", (e) => e.stopPropagation());
   checkbox.addEventListener("change", () => {
     task.completed = checkbox.checked;
     task.completedAt = task.completed ? Date.now() : null;
@@ -306,33 +322,15 @@ function buildTaskItem(task) {
     render();
   });
 
-  const titleEl = row.querySelector(".task-title");
-  titleEl.addEventListener("blur", () => {
-    const newTitle = titleEl.textContent.trim();
-    if (newTitle && newTitle !== task.title) {
-      task.title = newTitle;
-      saveState();
-      renderCounts();
-    } else {
-      titleEl.textContent = task.title;
-    }
-  });
-  titleEl.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      titleEl.blur();
-    }
-    if (e.key === "Escape") {
-      titleEl.textContent = task.title;
-      titleEl.blur();
-    }
-  });
-
-  row.querySelector(".task-delete").addEventListener("click", () => {
+  const deleteBtn = row.querySelector(".task-delete");
+  deleteBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
     state.tasks = state.tasks.filter((t) => t.id !== task.id);
     saveState();
     render();
   });
+
+  row.addEventListener("click", () => openEditPanel(task.id));
 
   return row;
 }
@@ -386,6 +384,7 @@ function addTask({ title, listId, due, priority }) {
 }
 
 function openCompose() {
+  closeEditPanel();
   composePanel.hidden = false;
   findPanel.hidden = true;
   if (currentListId !== "__all__") {
@@ -439,6 +438,69 @@ composeTitle.addEventListener("keydown", (e) => {
   }
 });
 
+// ===================== タスク編集 =====================
+function openEditPanel(taskId) {
+  const task = state.tasks.find((t) => t.id === taskId);
+  if (!task) return;
+  editingTaskId = taskId;
+  closeCompose();
+  findPanel.hidden = true;
+  populateListSelect(editList, task.listId);
+  editList.value = task.listId;
+  editTitle.value = task.title;
+  editDue.value = task.due || "";
+  editPriority.value = task.priority;
+  editPanel.hidden = false;
+  editTitle.focus();
+}
+
+function closeEditPanel() {
+  editPanel.hidden = true;
+  editingTaskId = null;
+}
+
+function saveEdit() {
+  const task = state.tasks.find((t) => t.id === editingTaskId);
+  if (!task) return;
+  const title = editTitle.value.trim();
+  if (!title) {
+    editTitle.focus();
+    return;
+  }
+  task.title = title;
+  task.listId = editList.value;
+  task.due = editDue.value || null;
+  task.priority = editPriority.value;
+  saveState();
+  closeEditPanel();
+  render();
+  setStatus("タスクを更新しました");
+}
+
+editSaveBtn.addEventListener("click", saveEdit);
+editTitle.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    saveEdit();
+  }
+  if (e.key === "Escape") {
+    closeEditPanel();
+  }
+});
+
+editDeleteBtn.addEventListener("click", () => {
+  const task = state.tasks.find((t) => t.id === editingTaskId);
+  if (!task) return;
+  if (!confirm(`タスク「${task.title}」を削除しますか?`)) return;
+  state.tasks = state.tasks.filter((t) => t.id !== editingTaskId);
+  saveState();
+  closeEditPanel();
+  render();
+  setStatus("タスクを削除しました");
+});
+
+editCloseBtn.addEventListener("click", closeEditPanel);
+
 // ===================== 検索 =====================
 findBtn.addEventListener("click", () => {
   if (!findPanel.hidden) {
@@ -447,7 +509,8 @@ findBtn.addEventListener("click", () => {
     render();
   } else {
     findPanel.hidden = false;
-    composePanel.hidden = true;
+    closeCompose();
+    closeEditPanel();
     findInput.focus();
   }
 });
@@ -545,11 +608,13 @@ document.addEventListener("keydown", (e) => {
   if (isMod && e.key.toLowerCase() === "f") {
     e.preventDefault();
     findPanel.hidden = false;
-    composePanel.hidden = true;
+    closeCompose();
+    closeEditPanel();
     findInput.focus();
   }
   if (e.key === "Escape") {
     if (!composePanel.hidden) closeCompose();
+    if (!editPanel.hidden) closeEditPanel();
     if (!findPanel.hidden) {
       findPanel.hidden = true;
       searchQuery = "";

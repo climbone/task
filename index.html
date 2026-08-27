@@ -117,6 +117,35 @@
       </div>
     </div>
 
+    <!-- タスク編集パネル -->
+    <div id="editPanel" class="find-panel" hidden>
+      <div class="find-row">
+        <span class="material-symbols-outlined find-icon">edit_note</span>
+        <input id="editTitle" type="text" placeholder="タスク名" class="find-input compose-title" />
+      </div>
+      <div class="find-row">
+        <span class="find-label">リスト</span>
+        <select id="editList" class="find-input short select-input"></select>
+        <span class="find-label">期限</span>
+        <input id="editDue" type="date" class="find-input short" />
+        <span class="find-label">優先度</span>
+        <select id="editPriority" class="find-input short select-input">
+          <option value="low">低</option>
+          <option value="mid">中</option>
+          <option value="high">高</option>
+        </select>
+        <span class="spacer-inline"></span>
+        <button id="editDeleteBtn" class="find-btn danger-outline">
+          <span class="material-symbols-outlined">delete</span>
+          削除
+        </button>
+        <button id="editSaveBtn" class="find-btn primary-outline">保存</button>
+        <button id="editCloseBtn" class="find-close" title="閉じる">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+    </div>
+
     <!-- メイン領域 -->
     <div class="main-wrap">
       <!-- サイドバー: リスト一覧 -->
