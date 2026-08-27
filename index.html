@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Taskline タスク管理</title>
+<meta name="theme-color" content="#ffffff" />
+<link rel="stylesheet" href="styles.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0,0&display=block">
+</head>
+<body>
+  <div class="app">
+    <!-- トップバー -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="brand">
+          <span class="material-symbols-outlined brand-icon">checklist</span>
+          <span class="brand-name">Taskline</span>
+        </div>
+        <button id="newTaskBtn" class="tool-btn primary" title="新しいタスク (Ctrl+N)">
+          <span class="material-symbols-outlined">add</span>
+          <span class="btn-label">新規タスク</span>
+        </button>
+
+        <div class="menu-wrap">
+          <button id="sortBtn" class="tool-btn" title="並び替え">
+            <span class="material-symbols-outlined">swap_vert</span>
+            <span class="btn-label">並び替え</span>
+            <span class="material-symbols-outlined caret">expand_more</span>
+          </button>
+          <div id="sortMenu" class="menu" hidden>
+            <div class="menu-group-label">並び替え</div>
+            <button data-sort="created" class="menu-item">追加順</button>
+            <button data-sort="due" class="menu-item">期限日順</button>
+            <button data-sort="priority" class="menu-item">優先度順</button>
+            <button data-sort="alpha" class="menu-item">名前順(A-Z)</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="topbar-right">
+        <button id="findBtn" class="tool-btn icon-only" title="検索 (Ctrl+F)">
+          <span class="material-symbols-outlined">search</span>
+        </button>
+        <button id="clearCompletedBtn" class="tool-btn icon-only" title="完了済みタスクを削除">
+          <span class="material-symbols-outlined">delete_sweep</span>
+        </button>
+        <button id="themeBtn" class="tool-btn icon-only" title="ライト/ダーク切替">
+          <span class="material-symbols-outlined">contrast</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ビュー切替タブ -->
+    <div class="tabbar-wrap">
+      <div id="tabbar" class="tabbar">
+        <button class="tab active" data-filter="all">
+          <span class="tab-title">すべて</span>
+          <span class="tab-count" id="countAll">0</span>
+        </button>
+        <button class="tab" data-filter="today">
+          <span class="tab-title">今日</span>
+          <span class="tab-count" id="countToday">0</span>
+        </button>
+        <button class="tab" data-filter="overdue">
+          <span class="tab-title">期限超過</span>
+          <span class="tab-count" id="countOverdue">0</span>
+        </button>
+        <button class="tab" data-filter="active">
+          <span class="tab-title">未完了</span>
+          <span class="tab-count" id="countActive">0</span>
+        </button>
+        <button class="tab" data-filter="completed">
+          <span class="tab-title">完了</span>
+          <span class="tab-count" id="countCompleted">0</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 検索パネル -->
+    <div id="findPanel" class="find-panel" hidden>
+      <div class="find-row">
+        <span class="material-symbols-outlined find-icon">search</span>
+        <input id="findInput" type="text" placeholder="タスクを検索" class="find-input" />
+        <span id="findCount" class="find-count"></span>
+        <span class="spacer-inline"></span>
+        <button id="findCloseBtn" class="find-close" title="閉じる">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 新規タスク入力パネル -->
+    <div id="composePanel" class="find-panel" hidden>
+      <div class="find-row">
+        <span class="material-symbols-outlined find-icon">edit</span>
+        <input id="composeTitle" type="text" placeholder="タスク名を入力してEnter" class="find-input compose-title" />
+      </div>
+      <div class="find-row">
+        <span class="find-label">リスト</span>
+        <select id="composeList" class="find-input short select-input"></select>
+        <span class="find-label">期限</span>
+        <input id="composeDue" type="date" class="find-input short" />
+        <span class="find-label">優先度</span>
+        <select id="composePriority" class="find-input short select-input">
+          <option value="low">低</option>
+          <option value="mid" selected>中</option>
+          <option value="high">高</option>
+        </select>
+        <span class="spacer-inline"></span>
+        <button id="composeAddBtn" class="find-btn primary-outline">追加</button>
+        <button id="composeCloseBtn" class="find-close" title="閉じる">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- メイン領域 -->
+    <div class="main-wrap">
+      <!-- サイドバー: リスト一覧 -->
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <span class="sidebar-title">マイリスト</span>
+          <button id="addListBtn" class="tab-add-btn" title="リストを追加">
+            <span class="material-symbols-outlined">add</span>
+          </button>
+        </div>
+        <div id="listNav" class="list-nav"></div>
+      </aside>
+
+      <!-- タスク一覧 -->
+      <div class="task-area">
+        <div id="taskList" class="task-list"></div>
+        <div id="emptyState" class="empty-state" hidden>
+          <span class="material-symbols-outlined empty-icon">task_alt</span>
+          <p>タスクはありません</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ステータスバー -->
+    <footer class="statusbar">
+      <div class="counter-box" title="表示中のリスト">
+        <span class="material-symbols-outlined status-icon">folder</span>
+        <span id="currentListLabel">すべて</span>
+      </div>
+      <div class="counter-box" title="残りのタスク数">
+        <span id="remainingCount">0</span>
+        <label>残り</label>
+      </div>
+      <div class="counter-box" title="完了タスク数">
+        <span id="doneCount">0</span>
+        <label>完了</label>
+      </div>
+      <div class="counter-box" title="全タスク数">
+        <span id="totalCount">0</span>
+        <label>合計</label>
+      </div>
+      <div class="spacer"></div>
+      <span id="statusMsg" class="status-msg">準備完了</span>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
